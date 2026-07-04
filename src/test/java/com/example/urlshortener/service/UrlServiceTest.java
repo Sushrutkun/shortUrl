@@ -16,6 +16,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.core.env.Environment;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -105,7 +106,7 @@ class UrlServiceTest {
 
     @Test
     void shorten_withTtl_setsExpiresAt() {
-        CreateUrlRequest request = new CreateUrlRequest("https://example.com/temp", null, 7);
+        CreateUrlRequest request = new CreateUrlRequest("https://example.com/temp", null, Duration.ofDays(7));
         when(repository.findFirstActiveByUrlHash(anyString())).thenReturn(Optional.empty());
         when(repository.existsByShortCodeAndDeletedFalse(anyString())).thenReturn(false);
 

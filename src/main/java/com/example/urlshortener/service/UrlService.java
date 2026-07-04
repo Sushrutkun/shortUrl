@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 @Service
@@ -53,8 +52,8 @@ public class UrlService {
             }
         }
 
-        Instant expiresAt = request.getTtlDays() != null
-            ? Instant.now().plus(request.getTtlDays(), ChronoUnit.DAYS)
+        Instant expiresAt = request.getTtl() != null
+            ? Instant.now().plus(request.getTtl())
             : null;
 
         String code;
@@ -138,8 +137,8 @@ public class UrlService {
 
         shortUrl.setOriginalUrl(request.getUrl());
         shortUrl.setUrlHash(CodeGeneratorService.sha256Hex(request.getUrl()));
-        if (request.getTtlDays() != null) {
-            shortUrl.setExpiresAt(Instant.now().plus(request.getTtlDays(), ChronoUnit.DAYS));
+        if (request.getTtl() != null) {
+            shortUrl.setExpiresAt(Instant.now().plus(request.getTtl()));
         }
         repository.save(shortUrl);
         cacheService.evict(code); // stale mapping must not keep serving from cache

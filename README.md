@@ -69,7 +69,7 @@ DELETE /api/v1/urls/{code}           soft delete (evicts cache)
 ```bash
 curl -X POST http://localhost:8080/api/v1/urls \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com/very/long/path", "alias": "promo", "ttlDays": 30}'
+  -d '{"url": "https://example.com/very/long/path", "alias": "promo", "ttl": "P30D"}'
 
 curl -i http://localhost:8080/promo   # 302 -> Location: https://example.com/very/long/path
 

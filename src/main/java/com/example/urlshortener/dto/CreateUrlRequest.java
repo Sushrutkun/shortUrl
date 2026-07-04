@@ -2,10 +2,12 @@ package com.example.urlshortener.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.constraints.time.DurationMin;
+
+import java.time.Duration;
 
 @Data
 @NoArgsConstructor
@@ -20,6 +22,7 @@ public class CreateUrlRequest {
     @Pattern(regexp = "^[A-Za-z0-9_-]{3,32}$", message = "alias must be 3-32 alphanumeric/-/_ characters")
     private String alias;
 
-    @Positive(message = "ttlDays must be positive")
-    private Integer ttlDays;
+    /** Optional time-to-live as an ISO-8601 duration, e.g. "PT10S", "PT1M", "P2D". */
+    @DurationMin(seconds = 1, message = "ttl must be a positive ISO-8601 duration (e.g. PT10S, PT1M, P2D)")
+    private Duration ttl;
 }

@@ -4,6 +4,7 @@ import com.example.urlshortener.dto.ErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -19,6 +20,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({MethodArgumentNotValidException.class, ConstraintViolationException.class})
     public ResponseEntity<ErrorResponse> handleValidation(Exception ex) {
         return build(HttpStatus.BAD_REQUEST, "Validation failed: " + ex.getMessage());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException ex) {
+        // Malformed JSON or an unparseable field, e.g. ttl not a valid ISO-8601 duration.
+        return build(HttpStatus.BAD_REQUEST, "Malformed request body: check field formats (e.g. ttl must be ISO-8601 like PT10S, P2D)");
     }
 
     @ExceptionHandler(UrlNotFoundException.class)
