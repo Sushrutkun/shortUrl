@@ -1,12 +1,9 @@
 package com.example.urlshortener.service;
 
 import com.example.urlshortener.exception.CodeGenerationException;
-import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -14,13 +11,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CodeGeneratorServiceTest {
 
-    private BloomFilter<CharSequence> bloomFilter;
     private CodeGeneratorService codeGeneratorService;
 
     @BeforeEach
     void setUp() {
-        bloomFilter = BloomFilter.create(Funnels.stringFunnel(StandardCharsets.UTF_8), 10_000, 0.01);
-        codeGeneratorService = new CodeGeneratorService(bloomFilter);
+        // Empty filter: mightContain() is always false, so generate() takes the
+        // "definitely not taken" fast path and never touches the DB check.
+        codeGeneratorService = new CodeGeneratorService(new InMemoryShortCodeBloomFilter());
     }
 
     @Test
@@ -40,19 +37,15 @@ class CodeGeneratorServiceTest {
 
     @Test
     void fallsThroughToDbCheckWhenBloomFilterReportsPossibleMatch() {
-        // Tiny, near-saturated filter: mightContain() returns true for virtually any input,
-        // simulating the "maybe taken" case that must fall through to a real DB check.
-        BloomFilter<CharSequence> saturatedFilter =
-            BloomFilter.create(Funnels.stringFunnel(StandardCharsets.UTF_8), 1, 0.5);
-        saturatedFilter.put("seed");
-        CodeGeneratorService generator = new CodeGeneratorService(saturatedFilter);
+        // A filter that always answers "maybe taken" forces every candidate through the real DB check.
+        CodeGeneratorService generator = new CodeGeneratorService(new SaturatedShortCodeBloomFilter());
 
         AtomicInteger dbCheckCount = new AtomicInteger(0);
-        // DB confirms the first candidate is actually free (false positive case) -> should succeed.
+        // DB confirms the first candidate is actually free (false-positive case) -> should succeed.
         String code = generator.generate("https://example.com/a",
             existing -> {
                 dbCheckCount.incrementAndGet();
-                return false; // not actually taken - bloom filter's hit was a false positive
+                return false; // not actually taken - the filter's hit was a false positive
             });
 
         assertThat(code).hasSize(8);
@@ -61,10 +54,7 @@ class CodeGeneratorServiceTest {
 
     @Test
     void throwsAfterExhaustingMaxAttemptsWhenEveryCandidateIsGenuinelyTaken() {
-        BloomFilter<CharSequence> saturatedFilter =
-            BloomFilter.create(Funnels.stringFunnel(StandardCharsets.UTF_8), 1, 0.5);
-        saturatedFilter.put("seed");
-        CodeGeneratorService generator = new CodeGeneratorService(saturatedFilter);
+        CodeGeneratorService generator = new CodeGeneratorService(new SaturatedShortCodeBloomFilter());
 
         assertThatThrownBy(() ->
             generator.generate("https://example.com/a", existing -> true) // DB always says taken

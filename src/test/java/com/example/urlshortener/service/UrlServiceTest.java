@@ -7,15 +7,12 @@ import com.example.urlshortener.exception.AliasConflictException;
 import com.example.urlshortener.exception.UrlNotFoundException;
 import com.example.urlshortener.kafka.ClickEventProducer;
 import com.example.urlshortener.repository.ShortUrlRepository;
-import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.core.env.Environment;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -34,14 +31,16 @@ class UrlServiceTest {
     @Mock private ClickEventProducer clickEventProducer;
     @Mock private Environment environment;
 
-    private BloomFilter<CharSequence> bloomFilter;
+    private ShortCodeBloomFilter bloomFilter;
     private CodeGeneratorService codeGeneratorService;
     private UrlService urlService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        bloomFilter = BloomFilter.create(Funnels.stringFunnel(StandardCharsets.UTF_8), 10_000, 0.01);
+        // Exact, stateful stand-in: put()/mightContain() behave like a real filter with no false
+        // positives, which is all these tests need (the fall-through path is covered elsewhere).
+        bloomFilter = new InMemoryShortCodeBloomFilter();
         codeGeneratorService = new CodeGeneratorService(bloomFilter);
         when(environment.getProperty(eq("app.base-url"), anyString())).thenReturn("http://localhost:8080");
 

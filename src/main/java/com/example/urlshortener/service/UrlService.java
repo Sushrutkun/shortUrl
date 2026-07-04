@@ -8,7 +8,6 @@ import com.example.urlshortener.exception.AliasConflictException;
 import com.example.urlshortener.exception.UrlNotFoundException;
 import com.example.urlshortener.kafka.ClickEventProducer;
 import com.example.urlshortener.repository.ShortUrlRepository;
-import com.google.common.hash.BloomFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,14 +21,14 @@ public class UrlService {
     private final CodeGeneratorService codeGeneratorService;
     private final CacheService cacheService;
     private final ClickEventProducer clickEventProducer;
-    private final BloomFilter<CharSequence> bloomFilter;
+    private final ShortCodeBloomFilter bloomFilter;
     private final String baseUrl;
 
     public UrlService(ShortUrlRepository repository,
                        CodeGeneratorService codeGeneratorService,
                        CacheService cacheService,
                        ClickEventProducer clickEventProducer,
-                       BloomFilter<CharSequence> bloomFilter,
+                       ShortCodeBloomFilter bloomFilter,
                        org.springframework.core.env.Environment env) {
         this.repository = repository;
         this.codeGeneratorService = codeGeneratorService;

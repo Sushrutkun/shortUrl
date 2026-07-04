@@ -67,7 +67,6 @@ Lives as **middleware inside this single service** (a servlet filter on `POST /a
 
 ## What I'd do next with more time
 
-- Move the Bloom filter to a Redis-backed shared structure for multi-instance deployments.
 - Add a counting Bloom filter (or periodic filter rebuild from DB) to allow alias reuse after deletion.
 - Add an active expiry-cleanup job once dead-row volume justifies it.
 - Extend analytics with referrer/user-agent dimensions.

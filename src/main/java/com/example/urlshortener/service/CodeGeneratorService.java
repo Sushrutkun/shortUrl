@@ -1,7 +1,6 @@
 package com.example.urlshortener.service;
 
 import com.example.urlshortener.exception.CodeGenerationException;
-import com.google.common.hash.BloomFilter;
 import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
@@ -27,9 +26,9 @@ public class CodeGeneratorService {
     private static final int CODE_LENGTH = 8;
     private static final int MAX_ATTEMPTS = 3;
 
-    private final BloomFilter<CharSequence> bloomFilter;
+    private final ShortCodeBloomFilter bloomFilter;
 
-    public CodeGeneratorService(BloomFilter<CharSequence> bloomFilter) {
+    public CodeGeneratorService(ShortCodeBloomFilter bloomFilter) {
         this.bloomFilter = bloomFilter;
     }
 
