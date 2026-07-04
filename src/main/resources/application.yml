@@ -1,47 +1,77 @@
-server:
-  port: 8080
+# Production profile — activate with SPRING_PROFILES_ACTIVE=prod.
+#
+# Targets Aiven managed MySQL, Valkey (Redis) and Kafka, all over TLS. Every secret is read from an
+# environment variable (set them in the Render dashboard / render.yaml). Aiven's Kafka endpoint uses
+# the project CA (self-signed), so it is materialized to $AIVEN_CA_PATH by docker-entrypoint.sh from
+# the $AIVEN_CA_CERT env var. MySQL (sslMode=REQUIRED) and Redis (public Let's Encrypt cert) do not
+# need it.
 
 app:
-  base-url: http://localhost:8080
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+  kafka:
+    # Aiven multi-broker clusters reject a replication factor of 1. Match your plan's broker count.
+    replication-factor: 2
+    # Aiven's free Kafka plan caps partitions at 2 per topic.
+    partitions: 2
 
 spring:
-  application:
-    name: url-shortener
-
   datasource:
-    url: jdbc:mysql://localhost:3306/url_shortener?createDatabaseIfNotExist=true
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
+    # sslMode=REQUIRED encrypts the connection without importing the CA (encryption only, no CA verify).
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?sslMode=REQUIRED
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
 
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: ${REDIS_USERNAME:default}
+      password: ${REDIS_PASSWORD}
+      # Aiven Valkey/Redis presents a public Let's Encrypt cert, so the default JVM truststore
+      # validates it — no custom CA bundle needed (and adding one breaks the chain).
+      ssl:
+        enabled: true
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
     producer:
+      # ClickEvent is published as JSON (StringSerializer can only handle String values).
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      acks: all
-      retries: 3
+      properties:
+        # Click publishing is fire-and-forget on the redirect hot path. Cap how long send()
+        # may block fetching metadata so an unreachable broker adds ~5s, not 60s, to a redirect
+        # (and ClickEventProducer swallows the resulting timeout). 5s (vs the old 2s) leaves
+        # headroom for the producer's cold-start TLS+SASL+metadata+INIT_PRODUCER_ID handshake
+        # against the remote Aiven cluster; ClickEventProducer also pre-warms it at startup so
+        # real user clicks hit an already-initialized producer and don't block at all.
+        max.block.ms: 5000
     consumer:
+      # Mirror of the producer: deserialize the JSON click events back into typed ClickEvent
+      # objects for the @KafkaListener (and the auto-provisioned retry/DLT topics).
       group-id: analytics-consumer
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "com.example.urlshortener.dto"
         spring.json.value.default.type: com.example.urlshortener.dto.ClickEvent
+    security:
+      protocol: SASL_SSL
+    properties:
+      sasl.mechanism: SCRAM-SHA-256
+      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USERNAME}" password="${KAFKA_PASSWORD}";
+      # Trust the Aiven project CA (self-signed) via an inline PEM truststore — no JKS/keystore files.
+      ssl.truststore.type: PEM
+      ssl.truststore.location: ${AIVEN_CA_PATH:/tmp/aiven-ca.pem}
+      ssl.endpoint.identification.algorithm: https
 
+# TEMPORARY: diagnose the "Node -1 disconnected" SASL failure. These surface the exact reason
+# the broker drops the connection (auth vs. TLS vs. wrong listener). Toggle with KAFKA_DEBUG=DEBUG
+# (defaults to INFO = off) and remove once Kafka connects cleanly — DEBUG on the network/auth
+# path is verbose and can log connection metadata.
 logging:
   level:
-    com.example.urlshortener: INFO
+    org.apache.kafka.clients.NetworkClient: ${KAFKA_DEBUG:INFO}
+    org.apache.kafka.common.network.Selector: ${KAFKA_DEBUG:INFO}
+    org.apache.kafka.common.security.authenticator: ${KAFKA_DEBUG:INFO}
+    org.apache.kafka.clients.producer.internals.Sender: ${KAFKA_DEBUG:INFO}

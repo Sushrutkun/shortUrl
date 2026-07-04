@@ -4,6 +4,7 @@ import com.example.urlshortener.config.KafkaTopicConfig;
 import com.example.urlshortener.dto.ClickEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.retrytopic.RetryTopicConfigurationBuilder;
@@ -48,12 +49,22 @@ public class ClickEventConsumer {
 
     @Configuration
     static class RetryTopicConfig {
+
+        // Retry/DLT topics are auto-provisioned; keep their partition/replication settings in step with
+        // the main topic so managed clusters (Aiven: RF >= 2, <= 2 partitions per topic) accept them.
+        @Value("${app.kafka.partitions:6}")
+        private int partitions;
+
+        @Value("${app.kafka.replication-factor:1}")
+        private short replicationFactor;
+
         @Bean
         public RetryTopicConfiguration clickEventsRetryTopic(KafkaOperations<String, ClickEvent> template) {
             return RetryTopicConfigurationBuilder
                 .newInstance()
                 .maxAttempts(3)
                 .fixedBackOff(Duration.ofSeconds(2).toMillis())
+                .autoCreateTopics(true, partitions, replicationFactor)
                 .create(template);
         }
     }

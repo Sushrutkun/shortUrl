@@ -21,10 +21,14 @@ RUN groupadd --system app && useradd --system --gid app app
 
 # Copy just the built jar from the build stage (wildcard tolerates the version in the name).
 COPY --from=build /app/target/url-shortener-*.jar app.jar
+
+# Entrypoint materializes the Aiven CA (if provided) before launch2ing the JVM. See the script header.
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
 USER app
 
 EXPOSE 8080
 
-# `exec` so the JVM is PID 1 and receives SIGTERM directly for graceful shutdown.
 # JAVA_OPTS is passed through for per-environment tuning (heap, GC, -Dspring.profiles.active=...).
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/app.jar"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

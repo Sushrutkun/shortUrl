@@ -1,5 +1,6 @@
 package com.example.urlshortener.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
@@ -23,6 +24,9 @@ public class CreateUrlRequest {
     private String alias;
 
     /** Optional time-to-live as an ISO-8601 duration, e.g. "PT10S", "PT1M", "P2D". */
+    @Schema(type = "string", format = "duration", example = "PT1H",
+            description = "Optional TTL as an ISO-8601 duration, e.g. PT10S, PT1M, P2D. "
+                        + "Months/years (P1M, P1Y) are not supported.")
     @DurationMin(seconds = 1, message = "ttl must be a positive ISO-8601 duration (e.g. PT10S, PT1M, P2D)")
     private Duration ttl;
 }

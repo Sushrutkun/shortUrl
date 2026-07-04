@@ -68,6 +68,7 @@ bin/
 # Environment / secrets
 .env
 .env.*
+!.env.example
 *.pem
 application-local.properties
 application-local.yml
@@ -88,3 +89,4 @@ coverage/
 # JVM crash logs
 hs_err_pid*
 replay_pid*
+secrets/
