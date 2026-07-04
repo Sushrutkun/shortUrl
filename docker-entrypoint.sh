@@ -5,6 +5,17 @@
 # (e.g. local/default profile), so the image still runs against the plaintext compose stack.
 set -e
 
+# For local/self-hosted runs, config can be supplied as a mounted .env file:
+#   docker run -v "$PWD/.env:/app/.env:ro" ...
+# We source it here rather than via Docker's --env-file / Compose env_file, because those can't
+# parse the multi-line quoted AIVEN_CA_CERT - a POSIX `.` handles it. Absent on Render (env vars
+# come from the dashboard), so this block is simply skipped there.
+if [ -f /app/.env ]; then
+  set -a
+  . /app/.env
+  set +a
+fi
+
 CA_PATH="${AIVEN_CA_PATH:-/tmp/aiven-ca.pem}"
 if [ -n "$AIVEN_CA_CERT" ]; then
   printf '%s\n' "$AIVEN_CA_CERT" > "$CA_PATH"

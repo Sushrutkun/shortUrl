@@ -22,7 +22,8 @@ RUN groupadd --system app && useradd --system --gid app app
 # Copy just the built jar from the build stage (wildcard tolerates the version in the name).
 COPY --from=build /app/target/url-shortener-*.jar app.jar
 
-# Entrypoint materializes the Aiven CA (if provided) before launch2ing the JVM. See the script header.
+# Entrypoint sources a mounted /app/.env (if present), materializes the Aiven CA, then launches
+# the JVM. See the script header. Supply local config with: -v "$PWD/.env:/app/.env:ro".
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 

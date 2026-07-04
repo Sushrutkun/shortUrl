@@ -6,3 +6,8 @@ target/
 docker-compose.yml
 README.md
 DESIGN.md
+
+# Secrets are mounted at runtime, never baked into the image.
+.env
+.env.*
+secrets/
