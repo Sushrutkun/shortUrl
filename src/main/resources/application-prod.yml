@@ -1,0 +1,49 @@
+# Production profile — activate with SPRING_PROFILES_ACTIVE=prod.
+#
+# Targets Aiven managed MySQL, Valkey (Redis) and Kafka, all over TLS. Every secret is read from an
+# environment variable (set them in the Render dashboard / render.yaml). The single Aiven project CA
+# is materialized to $AIVEN_CA_PATH by docker-entrypoint.sh from the $AIVEN_CA_CERT env var, and is
+# trusted by both Redis and Kafka below.
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+  kafka:
+    # Aiven multi-broker clusters reject a replication factor of 1. Match your plan's broker count.
+    replication-factor: 2
+
+spring:
+  datasource:
+    # sslMode=REQUIRED encrypts the connection without importing the CA (encryption only, no CA verify).
+    url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?sslMode=REQUIRED
+    username: ${MYSQL_USERNAME}
+    password: ${MYSQL_PASSWORD}
+
+  # Shared SSL bundle holding the Aiven project CA, referenced by the Redis client below.
+  ssl:
+    bundle:
+      pem:
+        aiven:
+          truststore:
+            certificate: ${AIVEN_CA_PATH:/tmp/aiven-ca.pem}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: ${REDIS_USERNAME:default}
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: true
+        bundle: aiven
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    security:
+      protocol: SASL_SSL
+    properties:
+      sasl.mechanism: SCRAM-SHA-256
+      sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="${KAFKA_USERNAME}" password="${KAFKA_PASSWORD}";
+      # Trust the Aiven project CA (self-signed) via an inline PEM truststore — no JKS/keystore files.
+      ssl.truststore.type: PEM
+      ssl.truststore.location: ${AIVEN_CA_PATH:/tmp/aiven-ca.pem}
+      ssl.endpoint.identification.algorithm: https

@@ -68,28 +68,28 @@ services:
     depends_on:
       - kafka
 
-  app:
-    build: .
-    container_name: url-shortener-app
-    ports:
-      - "8080:8080"
-    environment:
-      # Point Spring at the in-network service hostnames instead of localhost.
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/url_shortener?createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      # Kafka's in-network PLAINTEXT listener (localhost:9092 is only for host access).
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      APP_BASE_URL: http://localhost:8080
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+#  app:
+#    build: .
+#    container_name: url-shortener-app
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      # Point Spring at the in-network service hostnames instead of localhost.
+#      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/url_shortener?createDatabaseIfNotExist=true
+#      SPRING_DATASOURCE_USERNAME: root
+#      SPRING_DATASOURCE_PASSWORD: root
+#      SPRING_DATA_REDIS_HOST: redis
+#      SPRING_DATA_REDIS_PORT: 6379
+#      # Kafka's in-network PLAINTEXT listener (localhost:9092 is only for host access).
+#      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+#      APP_BASE_URL: http://localhost:8080
+#    depends_on:
+#      mysql:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
 
 volumes:
   mysql-data:

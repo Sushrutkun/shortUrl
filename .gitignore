@@ -68,6 +68,7 @@ bin/
 # Environment / secrets
 .env
 .env.*
+!.env.example
 *.pem
 application-local.properties
 application-local.yml

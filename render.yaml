@@ -1,0 +1,52 @@
+# Render Blueprint — deploys the Dockerized url-shortener as a web service.
+# Connect this repo in the Render dashboard; Render reads this file and provisions the service.
+# Secrets are marked `sync: false` so you enter their values in the dashboard (never committed).
+services:
+  - type: web
+    name: url-shortener
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    # springdoc UI ships in the image (no actuator dependency); use it as a cheap liveness probe.
+    healthCheckPath: /swagger-ui/index.html
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+
+      # --- Aiven MySQL ---
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        sync: false
+      - key: MYSQL_DATABASE
+        sync: false      # Aiven default is "defaultdb"
+      - key: MYSQL_USERNAME
+        sync: false      # Aiven default is "avnadmin"
+      - key: MYSQL_PASSWORD
+        sync: false
+
+      # --- Aiven Valkey / Redis ---
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        sync: false
+      - key: REDIS_USERNAME
+        sync: false      # Aiven default is "default"
+      - key: REDIS_PASSWORD
+        sync: false
+
+      # --- Aiven Kafka (SASL_SSL / SCRAM-SHA-256; enable SASL on the service first) ---
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        sync: false      # host:port from the Aiven Kafka overview
+      - key: KAFKA_USERNAME
+        sync: false
+      - key: KAFKA_PASSWORD
+        sync: false
+
+      # --- Shared Aiven project CA (PEM). One CA covers MySQL/Redis/Kafka. Paste the full cert. ---
+      - key: AIVEN_CA_CERT
+        sync: false
+
+      # --- Public base URL used when building returned short links. Set to the onrender.com URL. ---
+      - key: APP_BASE_URL
+        sync: false
