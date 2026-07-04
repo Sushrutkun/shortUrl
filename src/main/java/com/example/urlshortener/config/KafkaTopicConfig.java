@@ -15,10 +15,14 @@ public class KafkaTopicConfig {
     @Value("${app.kafka.replication-factor:1}")
     private short replicationFactor;
 
+    // 6 locally; managed free/trial plans cap partitions per topic (Aiven free plan allows 2).
+    @Value("${app.kafka.partitions:6}")
+    private int partitions;
+
     @Bean
     public NewTopic clickEventsTopic() {
         return TopicBuilder.name(CLICK_EVENTS_TOPIC)
-                .partitions(6)
+                .partitions(partitions)
                 .replicas(replicationFactor)
                 .build();
         // Retry topics (url.click-events-retry-0, -retry-1) and the DLT

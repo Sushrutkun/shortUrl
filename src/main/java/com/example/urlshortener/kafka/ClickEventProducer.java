@@ -11,7 +11,7 @@ import java.time.Instant;
 
 /**
  * Fires one event per redirect, with no partition key (spec: "flush event without any key").
- * acks=all is configured at the producer-factory level (application.yml) so a write is only
+ * acks=all is configured at the producer-factory level (application-local.yml) so a write is only
  * considered successful once all in-sync replicas have it.
  */
 @Component
