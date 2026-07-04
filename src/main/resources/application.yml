@@ -34,6 +34,27 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    producer:
+      # ClickEvent is published as JSON (StringSerializer can only handle String values).
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        # Click publishing is fire-and-forget on the redirect hot path. Cap how long send()
+        # may block fetching metadata so an unreachable broker adds ~5s, not 60s, to a redirect
+        # (and ClickEventProducer swallows the resulting timeout). 5s (vs the old 2s) leaves
+        # headroom for the producer's cold-start TLS+SASL+metadata+INIT_PRODUCER_ID handshake
+        # against the remote Aiven cluster; ClickEventProducer also pre-warms it at startup so
+        # real user clicks hit an already-initialized producer and don't block at all.
+        max.block.ms: 5000
+    consumer:
+      # Mirror of the producer: deserialize the JSON click events back into typed ClickEvent
+      # objects for the @KafkaListener (and the auto-provisioned retry/DLT topics).
+      group-id: analytics-consumer
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.example.urlshortener.dto"
+        spring.json.value.default.type: com.example.urlshortener.dto.ClickEvent
     security:
       protocol: SASL_SSL
     properties:
@@ -43,3 +64,14 @@ spring:
       ssl.truststore.type: PEM
       ssl.truststore.location: ${AIVEN_CA_PATH:/tmp/aiven-ca.pem}
       ssl.endpoint.identification.algorithm: https
+
+# TEMPORARY: diagnose the "Node -1 disconnected" SASL failure. These surface the exact reason
+# the broker drops the connection (auth vs. TLS vs. wrong listener). Toggle with KAFKA_DEBUG=DEBUG
+# (defaults to INFO = off) and remove once Kafka connects cleanly — DEBUG on the network/auth
+# path is verbose and can log connection metadata.
+logging:
+  level:
+    org.apache.kafka.clients.NetworkClient: ${KAFKA_DEBUG:INFO}
+    org.apache.kafka.common.network.Selector: ${KAFKA_DEBUG:INFO}
+    org.apache.kafka.common.security.authenticator: ${KAFKA_DEBUG:INFO}
+    org.apache.kafka.clients.producer.internals.Sender: ${KAFKA_DEBUG:INFO}
