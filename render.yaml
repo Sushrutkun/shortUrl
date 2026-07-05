@@ -12,6 +12,9 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
+      # Render injects PORT=10000; tell Spring Boot to bind to that port.
+      - key: SERVER_PORT
+        value: 10000
 
       # --- Aiven MySQL ---
       - key: MYSQL_HOST
