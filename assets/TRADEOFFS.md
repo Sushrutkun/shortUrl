@@ -86,3 +86,24 @@ A companion to DESIGN.md that makes each key decision explicit: what was chosen,
 |---|---|
 | **Link-aware TTL (chosen)** | Redis TTL is capped to `min(5min, remainingLinkLifetime)`. A link with `ttl=PT30S` won't be served from cache for 5 minutes after it expires. Without this, lazy expiry would be bypassed on cache hits. |
 | Fixed 5-minute TTL (rejected) | Simple but incorrect for short-lived links — a link with a 10-second TTL could redirect for 5 minutes after expiry. |
+
+---
+
+## 10. Analytics storage: same table vs. separate table
+
+| Choice | Why |
+|---|---|
+| **Clicks column on `short_urls` (chosen)** | Zero joins on `GET /stats` — one row lookup returns code metadata and click count together. Simple schema, and the Kafka flush batches 60 seconds of clicks into one `UPDATE` per code (~1.7 writes/sec at 100 active codes), so write contention is negligible at this scale. |
+| Separate `click_counts` table (rejected for now) | The right design at scale. The `short_urls` table has two conflicting write patterns: codes are written once and then read-heavy; clicks are written every 60 seconds per active link. Under high load (10k redirects/sec across many hot links), the flush job's `UPDATE`s would contend with the redirect path's reads on the same rows, causing InnoDB row-lock wait timeouts. Separating them decouples the redirect hot path from the analytics write path entirely. |
+| Time-series store (ClickHouse / TimescaleDB) | The right design for richer analytics (clicks over time, referrer, user-agent breakdown). Out of scope for this exercise but the Kafka pipeline already produces the raw events needed to feed one. |
+| **What I'd do next** | Split into `short_urls` (immutable after creation) and `click_counts` (short_code, clicks, last_flushed_at) once redirect throughput makes lock contention measurable. |
+
+---
+
+## 11. Short code mutability: immutable after creation
+
+| Choice | Why |
+|---|---|
+| **Code is immutable once created (chosen)** | `PUT /api/v1/urls/{code}` only updates the destination URL and TTL — the `alias` field in the request body is intentionally ignored. Changing a code in-place touches four systems atomically: the DB row, the Bloom filter, the Redis cache key, and the click-count history. Getting all four right without a window of inconsistency is a disproportionate complexity increase for a rarely-needed operation. |
+| Allow code rename via PUT (rejected) | Would require: soft-deleting the old code and inserting a new row (losing click history), or updating `short_code` in-place and evicting the *old* Redis key (not the new one). Either way, the old code can never be freed from the Bloom filter (Guava doesn't support deletion), permanently retiring it. The benefit — letting a caller rename a vanity alias — does not justify this surface area. |
+| **Accepted limitation** | A caller who wants a different code must DELETE the old one and POST a new one. Click history does not carry over. This is documented behaviour, not a silent constraint. |
