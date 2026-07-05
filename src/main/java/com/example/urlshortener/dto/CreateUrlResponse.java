@@ -1,5 +1,7 @@
 package com.example.urlshortener.dto;
 
+import com.example.urlshortener.config.IstInstantSerializer;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,5 +17,6 @@ public class CreateUrlResponse {
     private String code;
     private String shortUrl;
     private String originalUrl;
+    @JsonSerialize(using = IstInstantSerializer.class)
     private Instant expiresAt;
 }

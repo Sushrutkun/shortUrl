@@ -1,5 +1,7 @@
 package com.example.urlshortener.dto;
 
+import com.example.urlshortener.config.IstInstantSerializer;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,7 +16,9 @@ import java.time.Instant;
 public class UrlStatsResponse {
     private String code;
     private long clicks;
+    @JsonSerialize(using = IstInstantSerializer.class)
     private Instant createdAt;
+    @JsonSerialize(using = IstInstantSerializer.class)
     private Instant expiresAt;
     /** True if clicks may lag reality by up to the analytics-consumer batch interval (~1 min). */
     private boolean approximate;
