@@ -19,13 +19,17 @@ WORKDIR /app
 # Run as a non-root user.
 RUN groupadd --system app && useradd --system --gid app app
 
-# Copy just the built jar from the build stage (wildcard tolerates the version in the name).
-COPY --from=build /app/target/url-shortener-*.jar app.jar
+# Container-aware JVM: size the heap to 75% of the container's memory limit (cgroup) instead of
+# the JDK default 25%. Override at runtime, e.g. -e JAVA_OPTS="-XX:MaxRAMPercentage=50.0 -Xss512k".
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
+
+# Copy the built jar, owned by the runtime user (wildcard tolerates the version in the name).
+COPY --from=build --chown=app:app /app/target/url-shortener-*.jar app.jar
 
 # Entrypoint sources a mounted /app/.env (if present), materializes the Aiven CA, then launches
 # the JVM. See the script header. Supply local config with: -v "$PWD/.env:/app/.env:ro".
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+# --chmod makes it executable in the same layer (no extra RUN chmod).
+COPY --chown=app:app --chmod=0755 docker-entrypoint.sh /app/docker-entrypoint.sh
 
 USER app
 

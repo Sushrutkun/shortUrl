@@ -18,7 +18,9 @@ fi
 
 CA_PATH="${AIVEN_CA_PATH:-/tmp/aiven-ca.pem}"
 if [ -n "$AIVEN_CA_CERT" ]; then
-  printf '%s\n' "$AIVEN_CA_CERT" > "$CA_PATH"
+  # Strip leading/trailing whitespace so a .env value like AIVEN_CA_CERT="\n-----BEGIN..." doesn't
+  # write a blank first line, which breaks PEM parsers.
+  printf '%s\n' "$AIVEN_CA_CERT" | sed '/^[[:space:]]*$/d' > "$CA_PATH"
 fi
 
 # exec so the JVM is PID 1 and receives SIGTERM directly for graceful shutdown.

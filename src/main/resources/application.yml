@@ -24,7 +24,7 @@ spring:
   data:
     redis:
       host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
+      port: ${REDIS_PORT:28603}
       username: ${REDIS_USERNAME:default}
       password: ${REDIS_PASSWORD}
       # Aiven Valkey/Redis presents a public Let's Encrypt cert, so the default JVM truststore
