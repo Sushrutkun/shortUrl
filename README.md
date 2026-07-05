@@ -54,7 +54,9 @@ services required to run the test suite. Redis calls are mocked in the integrati
 
 ## API
 
-See `DESIGN.md` and the original spec for the full contract. Summary:
+> **Deviation from spec:** the spec's `ttlDays` integer field is replaced with `ttl` (ISO-8601 duration, e.g. `"P30D"`, `"PT1H"`, `"PT30S"`). This supports finer-grained expiry than whole days — a 30-day link is `"P30D"`, a 1-hour link is `"PT1H"`. Behaviour is otherwise identical.
+
+See `DESIGN.md`, `TRADEOFFS.md`, and the original spec for the full contract. Summary:
 
 ```
 POST   /api/v1/urls                  create a short URL

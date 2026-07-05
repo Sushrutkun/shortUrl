@@ -49,6 +49,10 @@ Lives as **middleware inside this single service** (a servlet filter on `POST /a
 
 **Algorithm:** sliding window log, implemented with a Redis sorted set per client key (IP, or `X-Forwarded-For` if present): score = request timestamp; trim entries older than the window on each request, then count what's left. Limit set to roughly 80% of measured per-IP throughput headroom — tight enough to blunt a single-IP DDoS, loose enough not to bother normal traffic.
 
+## API deviation: `ttlDays` → `ttl`
+
+The spec defines `"ttlDays": 30` (integer, whole days only). This service accepts `"ttl"` as an ISO-8601 duration string instead (e.g. `"P30D"`, `"PT1H"`, `"PT30S"`). This is a strict superset — `"P30D"` is equivalent to `"ttlDays": 30` — and allows finer-grained expiry without changing any other behaviour.
+
 ## Redirect status code
 
 **302, not 301.** Browsers and CDNs cache 301s — after the first hit, repeat clicks never reach the server again, so click events are silently lost. 302 forces every click through the redirect handler, keeping analytics accurate. `Cache-Control: no-store` is set explicitly on the response as a second guard against caching.

@@ -107,7 +107,7 @@ public class UrlService {
             }
 
             originalUrl = shortUrl.getOriginalUrl();
-            cacheService.put(code, originalUrl);
+            cacheService.put(code, originalUrl, shortUrl.getExpiresAt());
         }
 
         // Fire-and-forget: never let analytics plumbing block or fail the redirect itself.

@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.*;
 
 class UrlServiceTest {
@@ -140,7 +142,7 @@ class UrlServiceTest {
         String url = urlService.resolveAndRecordClick("xyz");
 
         assertThat(url).isEqualTo("https://example.com/from-db");
-        verify(cacheService).put("xyz", "https://example.com/from-db");
+        verify(cacheService).put(eq("xyz"), eq("https://example.com/from-db"), isNull());
         verify(clickEventProducer).publishClick("xyz");
     }
 
@@ -169,7 +171,7 @@ class UrlServiceTest {
         assertThatThrownBy(() -> urlService.resolveAndRecordClick("expired"))
             .isInstanceOf(UrlNotFoundException.class);
 
-        verify(cacheService, never()).put(anyString(), anyString());
+        verify(cacheService, never()).put(anyString(), anyString(), any());
         verify(clickEventProducer, never()).publishClick(anyString());
     }
 
